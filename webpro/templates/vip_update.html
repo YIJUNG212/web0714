@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block style %}
+.updateform{
+    width:300px;height:600px;
+margin:100px auto 100px;
+background-color:blue;
+padding:20px ;
+color:#FFF;
+
+}
+.input_form{
+  box-sizing: border-box;
+  width: 100%; 
+  padding: 10px; 
+  margin-bottom: 10px; 
+}
+button{font-size:20px;}
+{% endblock %}
+
+
+{% block content %}
+<form action="/webuser/{{dict_data.id}}/update/update"  method="POST">
+<table class="updateform">
+{% csrf_token %} 
+<tr>
+<td>帳號{{dict_data.username}}<div class="input_form"  >{{ dict_data.username }}</div></td>
+</tr>
+
+<tr>
+<td>密碼<input class="input_form" type="text" id="password" name="password"   required value="{{ dict_data.password }}"  ></td>
+</tr>
+<tr>
+<td>確認密碼<input class="input_form" type="password" id="password_confirm" name="password_confirm"    ></td>
+</tr>
+<tr>
+<td>嗜好{{dict_data.hobit}}<input class="input_form" type="text" id="hobit" name="hobit"   required value="{{ dict_data.hobit }}" ></td>
+</tr>
+<tr>
+<td>住址{{dict_data.addr}}<input class="input_form" type="text" id="addr" name="addr"   required value="{{ dict_data.addr }}" ></td>
+</tr>
+<tr>
+<td>電話{{dict_data.phone}}<input class="input_form" type="tel" id="phone" name="phone"   required value="{{ dict_data.phone }}" ></td>
+</tr>
+
+<tr>
+<td><button onclick="showConfirmation();">更新</button></td> 
+<td></td>
+</tr>
+
+
+</table>
+</form>
+
+{% endblock %}
+{% block script   %}
+<!--目前設定可以透過JAVASCRIPT完成客製化功能,並在按下cancel時跳轉至指定url,只是系統不允許直接轉,所以要在setTimeout下執行-->
+function showConfirmation() {
+    
+    var choice =confirm("確認更新嗎?!")
+    if(choice){
+        alert("you press the button")
+    }else{
+         alert("你按了取消按鈕");
+  <!-- 設定跳轉page及延遲時間-->
+    setTimeout(function() {
+      window.location.href = 'http://homepi.myftp.org:8000/webuser/{{dict_data.id}}/update/load';
+    }, 0);
+    }
+
+  
+}
+
+
+
+
+{% endblock %}

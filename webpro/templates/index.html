@@ -1,0 +1,19 @@
+{% extends "base.html"  %}
+{% block style  %} 
+.photo_part{background-color:#f00;width:200px;height:200px; margin:50px 20px 50px 70px}
+.nav_part{background-color:#0f0; font-size:30px}
+.side_part{background-color:#00f;}
+.nav_item{display:inline;}
+{% endblock  %}
+{% block content %}
+{% load static %}
+<img  class="photo_part" src="{% static 'logo.jpg' %}" alt="logo Image">
+<div class="nav_part">
+	<div class="nav_item"><a href="/api/vip">Vip</a></div>
+	<div class="nav_item"><a href="/webuser_admin">Admin</a></div>
+</div>
+<div class="side_part">12313123</div>
+
+
+
+{% endblock  %}

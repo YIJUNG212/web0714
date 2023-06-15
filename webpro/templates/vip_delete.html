@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+
+{% block style %}
+.delform{
+    width:300px;height:600px;
+margin:100px auto 100px;
+background-color:blue;
+padding:20px ;
+color:#FFF;
+
+}
+.input_form{
+  box-sizing: border-box;
+  width: 100%; 
+  padding: 10px; 
+  margin-bottom: 10px; 
+}
+button{font-size:20px;}
+{% endblock %}
+
+{% block content %}
+<form action="/webuser/{{field_data.id}}/delete/delete"  method="POST">
+<table class="delform">
+{% csrf_token %}
+<tr>
+<td >帳號<input class="input_form" type="text" id="username" name="username"   required value="{{ field_data.username }}" ></td>
+</tr>
+<tr>
+<td>嗜好<input class="input_form" type="text" id="hobit" name="hobit"   required value="{{ field_data.hobit  }}" ></td>
+</tr>
+<tr>
+<td>first_name<input class="input_form" type="text" id="first_name" name="first_name"   required value="{{ field_data.first_name  }}" ></td>
+</tr>
+<tr>
+<td >last_name<input  class="input_form"type="text" id="last_name" name="last_name"   required value="{{ field_data.last_name  }}" ></td>
+</tr>
+
+<tr><td ><button   onclick="doublecheck();">delete</button></td> </tr>
+</table>
+</form>
+
+{% endblock %}
+
+
+{% block script  %}
+  function doublecheck(){
+  	return confirm("\n sure to delete data\n after delete can't back")
+  }
+{% endblock  %}

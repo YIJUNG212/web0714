@@ -1,0 +1,44 @@
+{% extends "base.html"  %}
+
+{% block style  %}
+.addform{width:300px;height:600px;
+margin:100px auto 100px;
+background-color:blue;
+padding:20px ;
+color:#FFF;}
+.register_data{
+  box-sizing: border-box;
+  width: 100%; 
+  padding: 10px; 
+  margin-bottom: 10px; 
+}
+{% endblock  %}
+
+{% block title   %}register  {% endblock  %}
+
+
+{% block content   %}
+<div class="addform">
+<h3>請輸入欲新增帳號密碼</h3>
+<form action="/api/vip_user_add"  method="POST">
+	{% csrf_token  %}
+	
+
+	<div>帳號:  <input class="register_data" type="text" name="username" id="username"> </div>
+	<div>密碼: <input class="register_data" type="password" name="password" id="password"></div>
+	<div>confirm密碼: <input class="register_data" type="password" name="password_confirm" id="password_confirm"></div>
+
+
+
+<!--	<div>電話 <input class="register_data" type="tel" name="phone"  id="phone"  ></div>
+	<div>住址 <input class="register_data" type="text" name="addr" id="addr">  </div>
+	<div>嗜好  <input class="register_data" type="text"  name="hobit"  id="hobit"></div>
+	<div>first_name<input class="register_data" type="text" name="first_name" id="firstname"></div>
+	<div>last_name<input class="register_data" type="text" name="last_name" id="last_name"></div>
+	<div>email<input class="register_data" type="email" name="email" id="email"></div>  -->
+	<div ><input  type="submit" name="button" id="button" value="submit">  </div>
+	
+</form>
+</div>
+
+{% endblock  %}
