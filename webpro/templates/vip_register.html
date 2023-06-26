@@ -27,6 +27,38 @@ color:#FFF;}
 	<div>帳號:  <input class="register_data" type="text" name="username" id="username"> </div>
 	<div>密碼: <input class="register_data" type="password" name="password" id="password"></div>
 	<div>confirm密碼: <input class="register_data" type="password" name="password_confirm" id="password_confirm"></div>
+	{% if user.is_staff or user.is_superuser %}
+	<div>超級管理者權限
+	 <label for="superuser0">
+            <input  type="radio" id="superuser0" name="superuser" value="0"> 沒有
+	</label>
+	<label for="superuser1">
+		<input type="radio" id="superuser" name="superuser" value="1"> 有
+	</label>
+	</div>
+
+	<div>管理者權限
+	 <label for="staff0">
+            <input type="radio" id="staff0" name="staff" value="0"> 沒有
+	</label>
+	<label for="staff1">
+		<input type="radio" id="staff1" name="staff" value="1"> 有
+	</label>
+	</div>
+	
+	{% endif %}
+	{% if user.is_staff and not user.is_superuser %}
+	
+	<div>管理者權限
+	 <label for="staff0">
+            <input type="radio" id="staff0" name="staff" value="0"> 沒有
+	</label>
+	<label for="staff1">
+		<input type="radio" id="staff1" name="staff" value="1"> 有
+	</label>
+	</div>
+	{% endif %}
+
 
 
 
@@ -37,6 +69,7 @@ color:#FFF;}
 	<div>last_name<input class="register_data" type="text" name="last_name" id="last_name"></div>
 	<div>email<input class="register_data" type="email" name="email" id="email"></div>  -->
 	<div ><input  type="submit" name="button" id="button" value="submit">  </div>
+	<div><a href="login3">已有帳號，請登入</a></div>
 	
 </form>
 </div>

@@ -2,10 +2,10 @@
 
 {% block style %}
 .updateform{
-    width:300px;height:600px;
-margin:100px auto 100px;
+width:300px;height:600px;
+margin:30px auto 10px;
 background-color:blue;
-padding:20px ;
+padding:10px ;
 color:#FFF;
 
 }
@@ -15,7 +15,9 @@ color:#FFF;
   padding: 10px; 
   margin-bottom: 10px; 
 }
-button{font-size:20px;}
+.leftbutton{  
+  margin:10px 100px 20px 650px;
+ }
 {% endblock %}
 
 
@@ -24,37 +26,48 @@ button{font-size:20px;}
 <table class="updateform">
 {% csrf_token %} 
 <tr>
-<td>帳號{{dict_data.username}}<div class="input_form"  >{{ dict_data.username }}</div></td>
+<td>帳號<span class="input_form"  >{{ dict_data.username }}</span></td>
 </tr>
 
 <tr>
-<td>密碼<input class="input_form" type="text" id="password" name="password"   required value="{{ dict_data.password }}"  ></td>
+<td>密碼<input class="input_form" type="text" id="password" name="password"    ></td>
 </tr>
 <tr>
 <td>確認密碼<input class="input_form" type="password" id="password_confirm" name="password_confirm"    ></td>
 </tr>
 <tr>
-<td>嗜好{{dict_data.hobit}}<input class="input_form" type="text" id="hobit" name="hobit"   required value="{{ dict_data.hobit }}" ></td>
+<td>first_name<input class="input_form" type="text" id="first_name" name="first_name"   required value="{{ dict_data.first_name }}" ></td>
 </tr>
 <tr>
-<td>住址{{dict_data.addr}}<input class="input_form" type="text" id="addr" name="addr"   required value="{{ dict_data.addr }}" ></td>
-</tr>
-<tr>
-<td>電話{{dict_data.phone}}<input class="input_form" type="tel" id="phone" name="phone"   required value="{{ dict_data.phone }}" ></td>
+<td>last_name<input class="input_form" type="text" id="last_name" name="last_name"   required value="{{ dict_data.last_name }}" ></td>
 </tr>
 
+
+
 <tr>
-<td><button onclick="showConfirmation();">更新</button></td> 
-<td></td>
+<td>嗜好<input class="input_form" type="text" id="hobit" name="hobit"   required value="{{ dict_data.hobit }}" ></td>
 </tr>
+<tr>
+<td>住址<input class="input_form" type="text" id="addr" name="addr"   required value="{{ dict_data.addr }}" ></td>
+</tr>
+<tr>
+<td>電話<input class="input_form" type="tel" id="phone" name="phone"   required value="{{ dict_data.phone }}" ></td>
+</tr>
+
+
 
 
 </table>
+<div class="leftbutton"><button  onclick="showConfirmation();">update</button>
+<button onclick="back_to_index();">index</button>
+</div>
+
 </form>
 
 {% endblock %}
 {% block script   %}
 <!--目前設定可以透過JAVASCRIPT完成客製化功能,並在按下cancel時跳轉至指定url,只是系統不允許直接轉,所以要在setTimeout下執行-->
+<script>
 function showConfirmation() {
     
     var choice =confirm("確認更新嗎?!")
@@ -68,9 +81,14 @@ function showConfirmation() {
     }, 0);
     }
 
-  
-}
+function back_to_index(){
+setTimeout(function(){
+    window.location.href = 'http://homepi.myftp.org:8000/index';
+}, 0);
 
+}
+}
+</script>
 
 
 

@@ -3,20 +3,24 @@
 
 {% block style %}
 .delform{
-    width:300px;height:600px;
-margin:100px auto 100px;
+width:300px;height:600px;
+margin:10px auto 30px;
 background-color:blue;
 padding:20px ;
 color:#FFF;
+border:sloid red 10px;
 
 }
-.input_form{
+.delform span{
   box-sizing: border-box;
-  width: 100%; 
-  padding: 10px; 
-  margin-bottom: 10px; 
+  width:100%; 
+  padding: 5px; 
+
 }
-button{font-size:20px;}
+.leftbutton{  
+  margin:10px 100px 20px 650px;
+ }
+
 {% endblock %}
 
 {% block content %}
@@ -24,27 +28,48 @@ button{font-size:20px;}
 <table class="delform">
 {% csrf_token %}
 <tr>
-<td >帳號<input class="input_form" type="text" id="username" name="username"   required value="{{ field_data.username }}" ></td>
+<td >帳號:&nbsp&nbsp&nbsp   <span>{{ field_data.username }}</span ></td>
 </tr>
 <tr>
-<td>嗜好<input class="input_form" type="text" id="hobit" name="hobit"   required value="{{ field_data.hobit  }}" ></td>
+<td>嗜好:&nbsp&nbsp&nbsp <span>{{ field_data.hobit  }}</span></td>
 </tr>
 <tr>
-<td>first_name<input class="input_form" type="text" id="first_name" name="first_name"   required value="{{ field_data.first_name  }}" ></td>
+<td>first_name:&nbsp&nbsp&nbsp <span>{% if field_data.first_name == '' %}None{% else %}{{ field_data.first_name }}{% endif %}</span></td>
 </tr>
 <tr>
-<td >last_name<input  class="input_form"type="text" id="last_name" name="last_name"   required value="{{ field_data.last_name  }}" ></td>
+<td>last_name:&nbsp&nbsp&nbsp <span>{% if field_data.last_name == '' %}None{% else %}{{ field_data.last_name }}{% endif %}</span></td>
 </tr>
 
-<tr><td ><button   onclick="doublecheck();">delete</button></td> </tr>
+
+
 </table>
+<div class="leftbutton"><button  onclick="doublecheck();">update</button>
+<button onclick="back_to_index();">index</button>
+</div>
 </form>
 
 {% endblock %}
 
 
 {% block script  %}
+<script>
   function doublecheck(){
-  	return confirm("\n sure to delete data\n after delete can't back")
+  	var recheck= confirm("\n sure to delete data\n after delete can't back");
+    if(recheck){
+      alert( {{field_data.first_name}} " is deleded");
+    }else{
+       alert( " cannceled");
+      setTimeout(function(){
+       window.location.href = 'http://homepi.myftp.org:8000/webuser/{{field_data.id}}/delete/load';
+    }, 0);
+    }
   }
+
+  function back_to_index(){
+    setTimeout(function(){
+       window.location.href = 'http://homepi.myftp.org:8000/index';
+    }, 0);
+
+  }
+  </script>
 {% endblock  %}

@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-#*y=ugq&opb^jngso1(91w1q6&ikbji6j4dkyf$drnha1^r0_g'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG =True
 
 ALLOWED_HOSTS = ["*"]
 
@@ -38,9 +38,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "myapp",
+   
 ]
 
 MIDDLEWARE = [
+  
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -48,6 +50,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #我試過將下面這行whitenoise移到最第1行會出錯
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'webpro.urls'
@@ -109,7 +114,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -127,9 +131,25 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS=[BASE_DIR/"static"]
+#設定生產模式要連結的資料夾,同時要安裝whitenoise 以後,再用python manage.py collectstatic來將static下的資料搜集到目前指定的資料夾下
+#這樣會將static下的資料全部撈過來
 STATIC_ROOT =BASE_DIR/"staticfiles"
+#加以下這行設定,在生產環境中的快取會好一點
+#STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+#設定圖片連結路徑,之後還要到urls.py去設定新的連結路徑
+MEDIA_ROOT = BASE_DIR/"media/"
+#起始的路徑為media
+MEDIA_URL = 'media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+#強制輸出使用預設編碼,如果上面的Databases裡設定有設置utf8mb4,後面資料庫的輸出就不會有問題
+# import sys
+# sys.stdout.encoding  # 檢查 stdout 使用的預設編碼
+# DEFAULT_CHARSET = 'utf-8'
+
+#  FILE_UPLOAD_PERMISSIONS = 0o755  如果有要改變上傳檔案的權限可以用這行指令，預設是644
