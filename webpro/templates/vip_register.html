@@ -12,6 +12,7 @@ color:#FFF;}
   padding: 10px; 
   margin-bottom: 10px; 
 }
+.alink{color:white;}
 {% endblock  %}
 
 {% block title   %}register  {% endblock  %}
@@ -19,7 +20,7 @@ color:#FFF;}
 
 {% block content   %}
 <div class="addform">
-<h3>請輸入欲新增帳號密碼</h3>
+<h3>新增帳號密碼</h3>
 <form action="/api/vip_user_add"  method="POST">
 	{% csrf_token  %}
 	
@@ -69,7 +70,7 @@ color:#FFF;}
 	<div>last_name<input class="register_data" type="text" name="last_name" id="last_name"></div>
 	<div>email<input class="register_data" type="email" name="email" id="email"></div>  -->
 	<div ><input  type="submit" name="button" id="button" value="submit">  </div>
-	<div><a href="login3">已有帳號，請登入</a></div>
+	<div><a href="login3" class="alink">已有帳號，請按此登入</a></div>
 	
 </form>
 </div>

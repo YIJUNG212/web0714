@@ -17,14 +17,18 @@
   <li class="nav-item">
     <a class="nav-link" href="webuser_admin">使用者資訊</a>
   </li>
-  <li class="nav-item">
+  {% comment %} <li class="nav-item">
     <a class="nav-link" href="test">測試驗證頁</a>
-  </li>
+  </li> {% endcomment %}
     <li class="nav-item">
     <a class="nav-link" href="upload_image">上傳商品</a>
   </li>
     <li class="nav-item">
     <a class="nav-link" href="product_buy">商品選購</a>
+  </li>
+   </li>
+    <li class="nav-item">
+    <a class="nav-link" href="shopcar_show">購物車</a>
   </li>
   {% if request.user.is_authenticated  %}
   <li class="nav-item">

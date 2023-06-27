@@ -31,7 +31,7 @@ class product(models.Model):
     productid =models.AutoField(primary_key=True)
     item_name=models.CharField(max_length=50,null=True,blank=True)
     item_description=models.CharField(max_length=255,null=True,blank=True)
-    item_price=models.IntegerField(null=True,blank=True)
+    item_price=models.IntegerField(null=True,blank=True,default=0)
     item_photo_image = models.ImageField(upload_to=update_image_permissions)
    # item_photo_image=models.ImageField(upload_to="item_photos")  
 
@@ -53,7 +53,22 @@ class shopitem(models.Model):
     #下面設定本地端應有的資料欄位
     #數量不得為空值,預設為1
     item_quantity=models.IntegerField(null=False,default=1)
+
+    item_price = models.IntegerField(null=True,blank=True,default=0)
+    #路徑一樣要設定,只是需要設定blank=True,就可以不用再上傳圖檔,而是至upload_to指定路徑去撈圖
+    
+
     item_sum = models.IntegerField(  null=True,blank=True,)
+    @property
+    def item_image_photo(self):
+        # 查询关联的product模型
+        product = self.item_name
+        if product:
+            # 返回product的图片路径
+            return product.item_photo_image
+        else:
+            return ''  # 如果没有关联的product，返回空字符串或其他默认值
+
 
     def __str__(self):
         return str(self.item_name)

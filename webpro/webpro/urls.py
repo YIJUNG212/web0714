@@ -58,7 +58,8 @@ urlpatterns = [
     path("shopitem",views.get_shopitem),
     path("product_buy",views.product_buy),
     path("product_select/<str:id>",views.buy_select),
-    path("shopcar",views.shopcar),
+    path("shopcar",views.shopcar_add),
+    path("shopcar_show",views.shopcar_show),
    
     
   

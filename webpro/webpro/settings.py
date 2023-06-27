@@ -138,9 +138,11 @@ STATIC_ROOT =BASE_DIR/"staticfiles"
 #STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 #設定圖片連結路徑,之後還要到urls.py去設定新的連結路徑
-MEDIA_ROOT = BASE_DIR/"media/"
+#MEDIA_ROOT = BASE_DIR/"media/"
+import os
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')#改這個寫法好像比較讀的到檔
 #起始的路徑為media
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

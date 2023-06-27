@@ -928,7 +928,9 @@ def buy_select(request,id=None):
         return render(request,"buy_select.html",{"pro_select":pro_select})
     else:
         return HttpResponse("wrong method")
-def shopcar(request):
+    
+    
+def shopcar_add(request):
     if request.method == "POST":
         #進來要先確認shopcar 在不在,不在的話,就生成
         #先取得userid
@@ -955,32 +957,169 @@ def shopcar(request):
                 sql_shopcar %= (userid)
                 cursor.execute(sql_shopcar,[])
                 #新增完購物車以後,新增shopitem
+                
                 # 获取插入的购物车记录的主键值
                 #shopitem的item_id對應的是shopcar的主鍵,所以應該是要用shopcar的主鍵,而carid非主鍵,只是這是個FK鍵而已
                 shopcar_id = cursor.lastrowid
-                sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id)  "
-                sql_shopitem += " VALUES ('%s','%s','%s')"
-                sql_shopitem %= (shopcar_id,quantity,item_id)
+                #抓取對應的product的欄位值
+                  # 获取商品的信息
+                product_sql = "SELECT item_description, item_price, item_photo_image FROM myapp_product WHERE productid = %s"
+                cursor.execute(product_sql, [item_id])
+                product_data = cursor.fetchone()
+             
+                item_description = product_data[0]
+                item_price = product_data[1]
+                item_image_photo = product_data[2]
+                #抓取完後,一併新增入資料
+                #另外,item_sum要等於item_price 乘以 item_quantity
+                #這裡的設定要轉型態是因為html用type=number送過來好像不確定會判斷成什麼型態的數字,所以還是要轉?
+                item_sum =item_price * int(quantity)
+                sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id,item_price,item_sum )  "
+                sql_shopitem += " VALUES ('%s','%s','%s','%s','%s')"
+                sql_shopitem %= (shopcar_id,quantity,item_id,item_price,item_sum)
                 cursor.execute(sql_shopitem, [])
+                #再來要新增shopsum,關聯是跟shopcar,也是要抓取新的shopsum的pk值.也就是shopcar_id
+                insert_sum_sql =" insert into myapp_shopsum ( sum_id_id ,shop_Totalsum) "
+                insert_sum_sql += " values ('%s','%s') "
+                sum_Total=0
+                sum_Total += item_sum
+                insert_sum_sql %= (shopcar_id,sum_Total)
+                #這樣就新增了shop_sum
+                cursor.execute(insert_sum_sql,[])
+                
+
+
                
 
                 return HttpResponse(" shopcar and shopitem added!!")
         else:
             # 有购物车，直接新增shopitem
+            #先找到購物車的pk鍵值
             sql_shopcar_check = "SELECT id FROM myapp_shopcar WHERE carid_id = %s"
             cursor.execute(sql_shopcar_check, [userid])
             result = cursor.fetchone()
+            print("======== result=======")
+            print(result)
+            # 获取商品的信息
+            product_sql = "SELECT item_description, item_price, item_photo_image,item_name FROM myapp_product WHERE productid = %s"
+            cursor.execute(product_sql, [item_id])
+            product_data = cursor.fetchone()
+           
+            
+            item_description = product_data[0]
+            item_price = product_data[1]
+            item_image_photo = product_data[2]
+            product_name=product_data[3]
 
             if result:
                 shopcar_id = result[0]  # 获取shopcar的主键值
-                sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id, item_quantity, item_name_id) "
-                sql_shopitem += "VALUES (%s, %s, %s)"
-                cursor.execute(sql_shopitem, [shopcar_id, quantity, item_id])
-                return HttpResponse("new shopitem added!!")
-             
+                #有購物車,要先判斷原來的shopitem的id是不是重複，也就是輸入的值item_name有沒有重複,item_name是fk對product,
+                #所以要先用product的主鍵來對應目前的shopitem裡的item_name_id有沒有值
+                shopitem_name_search="select item_name_id from myapp_shopitem where item_id_id ='%s' "
+                shopitem_name_search %=(shopcar_id)
+                cursor.execute(shopitem_name_search,[])
+                shopitem_get =cursor.fetchone()
+                shopid=shopitem_get[0]
+                  #這裡的設定要轉型態是因為html用type=number送過來好像不確定會判斷成什麼型態的數字,所以還是要轉?
+                item_sum =item_price * int(quantity)
+                #判斷shopitem有沒有存在,有就update,沒有就insert into
+                print("item_id",item_id)
+                print("shopid",shopid)
+                #沒有轉型會判斷錯誤,可能因為item_id是用html送過來的,可能都要轉型才會正確
+                if int(item_id) == int (shopid):
+                    shopitem_update ="update myapp_shopitem set item_quantity='%s',item_price='%s',item_sum='%s' "
+                    shopitem_update += "where item_id_id='%s' and item_name_id='%s' "
+                    shopitem_update %= (quantity,item_price,item_sum,shopcar_id,item_id)
+                    cursor.execute(shopitem_update,[])
+                    return HttpResponse("shopitem existed and updated!!")
+                else:
+                    sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id,item_price,item_sum )  "
+                    sql_shopitem += " VALUES ('%s','%s','%s','%s','%s')"
+                    sql_shopitem %= (shopcar_id,quantity,item_id,item_price,item_sum)
+                    cursor.execute(sql_shopitem, [])
+                    #再來要新增shopsum,關聯是跟shopcar,也是要抓取新的shopsum的pk值.也就是shopcar_id
+                    #理論上,若已經有購物車,表示有一個唯一的shopsum存在,必須有判斷式判斷若shopsum存在,則使用update
+                    sumTotal_id_search =" select id , shop_Totalsum from myapp_shopsum where sum_id_id = '%s' "
+                    sumTotal_id_search %=(shopcar_id)
+                    cursor.execute(sumTotal_id_search,[])
+                    sum_result =cursor.fetchone()
+                   
+                    if sum_result:        
+                        update_sum_sql =" update myapp_shopsum SET  shop_Totalsum ='%s' where sum_id_id='%s' "
+                        
+                        sum_Total=sum_result[1]#找到已存在的總和
+                        
+                        sum_Total += item_sum
+                        update_sum_sql %= (sum_Total,shopcar_id)
+                        cursor.execute(update_sum_sql,[])
 
+                        return HttpResponse("new shopitem  added and shopsum updated!!")
+                    else:
+                        return HttpResponse("new shopitem  added and shopsum not updated!!")
 
     else:
 
-     return HttpResponse("wrong method")
+        return HttpResponse("wrong method")
    
+
+
+               
+               
+from django.db import connection
+from .models import shopcar, shopitem
+
+def shopcar_show(request):
+    #這裡要去抓shopitem裡的資料
+    #當然啦,一開始要驗證有沒有權限
+    if request.user.is_authenticated:
+        #抓資料
+        #連結資料庫
+        cursor=connections["default"].cursor()
+        #先找shopcar當時的id
+        sql_shopcar_search ="select id from myapp_shopcar where carid_id ='%s' "
+        carid=request.user.id
+        sql_shopcar_search %= (carid)
+        cursor.execute(sql_shopcar_search,[])
+        result_carid =cursor.fetchone()
+        current_carid=result_carid[0]
+        #把找到的carid 當成搜尋條件
+        sql_shopitem_get ="select * from myapp_shopitem where item_id_id ='%s' "
+        sql_shopitem_get %=(current_carid)
+        cursor.execute(sql_shopitem_get,[])
+        current_shopitems=cursor.fetchall()
+        field_name=cursor.description
+        #放到新的list
+        
+
+        new_shopitem_list=[]
+        for data in current_shopitems:
+            item={}
+            i=0
+            print("===查看目前資料===")
+            print(data)#我要的是item_name的值
+            product_id =data[1]#第0個位置
+            #但目前的資料少了product裡的item_name,所以要從product裡撈出來,而不同的prodcutid要用foreach撈出來
+            sql_product_search =" select item_name,item_photo_image from myapp_product where productid ='%s'  "
+            sql_product_search %=(product_id)
+            cursor.execute(sql_product_search,[])
+            prod =cursor.fetchone()
+            pro=prod[0]#這樣才能取乾淨的值
+            image=prod[1]#取圖片資料
+            print(pro)#到這裡就用pro把資料撈出來了
+            for d in data:
+                item[field_name[i][0]]=d
+                 # 通过关联属性访问关联的Product对象,用sql就是無法顯示圖片
+                produ = product.objects.get(productid=data[1])
+                item['pro'] = produ.item_name
+                item['image'] = produ.item_photo_image
+                # item["pro"]=pro#存值進dict裡
+                # item["image"]=image
+                i=i+1
+            new_shopitem_list.append(item)
+        
+        
+        
+        return render(request,"shopcar_show.html",{"new_shopitem_list":new_shopitem_list})
+    else:
+        return HttpResponse("no right to access")
+        

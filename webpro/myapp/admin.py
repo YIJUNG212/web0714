@@ -5,7 +5,7 @@ from .models import webUser ,product,shopcar,shopitem,shopsum
 
 class ShopItemAdmin(admin.ModelAdmin):
     #以下是最後admin模式要顯示的欄位名稱
-    list_display = ('item_id','item_name', 'item_quantity', 'item_sum')
+    list_display = ('item_id','item_name', 'item_price','item_quantity', 'item_sum','item_image_photo')
     #下面是要省略不顯示的欄位,但實際存在,也就是輸入時,不輸入,交由程式來處理
     exclude = ('item_sum',)
 

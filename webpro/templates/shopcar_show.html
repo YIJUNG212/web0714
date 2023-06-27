@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block style %}
+.center{
+    display:flex;
+   
+   
+    justify-content: center;
+   
+
+}
+{% endblock %}
+
+{% block content %}
+
+
+<div class="center">
+  
+ {% for item in new_shopitem_list %}
+  
+  <div class="card" style="width: 18rem; height:30rem">
+  <img  src="{{item.image.url}}" class="card-img-top" alt="...">
+  <div class="card-body">
+    <h5 class="card-title">品名:{{item.pro}}</h5>
+   
+  </div>
+  <ul class="list-group list-group-flush">
+
+    <li class="list-group-item">單價:{{item.item_price}}</li>
+   <li class="list-group-item"> 數量:{{item.item_quantity}}</li>
+    <li class="list-group-item">小計:{{item.item_sum}}</li>
+  </ul>
+ 
+</div>
+    
+ {% endfor %}
+ </div>
+{% endblock %}
