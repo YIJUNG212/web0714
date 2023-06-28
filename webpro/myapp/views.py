@@ -934,16 +934,15 @@ def shopcar_add(request):
     if request.method == "POST":
         #進來要先確認shopcar 在不在,不在的話,就生成
         #先取得userid
-        userid =request.user.id
+        userid =request.user.id#這是webUser的主鍵
         #再取得POST過來的資訊
         quantity=request.POST["quantity"]
-        item_id=request.POST["item_id"]
-        print(item_id)
-        print(quantity)
-        print("==========================")
-        print(userid)
+        item_id=request.POST["item_id"]#這是product的主鍵
+        price =request.POST["price"]#這是傳過來的product的價格
+     
         cursor=connections["default"].cursor()
         #這裡是用外鍵去連結webUser的id,所以要用carid_id才會找到對的資料
+        #簡單說,就是在找特定的webUser下的shopcar
         sql =" select * from myapp_shopcar where carid_id = '%s' "
         sql %= (userid)
         cursor.execute(sql,[])
@@ -952,6 +951,7 @@ def shopcar_add(request):
         if  not result :
                 #當沒有資料時,要創建一筆資料給shopcar,同時將資料增至shopitem
                 #這裡的shopcar裡的carid用外鍵去關聯webUser的id 所以用carid_id,但生成後會有新的shopcar主鍵
+                #簡言之，用webUser特定用戶為值去輸入到shopcar,這是關聯式的用法
                 sql_shopcar="insert into myapp_shopcar (carid_id) "
                 sql_shopcar +="values ('%s')"
                 sql_shopcar %= (userid)
@@ -961,7 +961,7 @@ def shopcar_add(request):
                 # 获取插入的购物车记录的主键值
                 #shopitem的item_id對應的是shopcar的主鍵,所以應該是要用shopcar的主鍵,而carid非主鍵,只是這是個FK鍵而已
                 shopcar_id = cursor.lastrowid
-                #抓取對應的product的欄位值
+                #完成輸入後,要重新抓取對應的product的欄位值
                   # 获取商品的信息
                 product_sql = "SELECT item_description, item_price, item_photo_image FROM myapp_product WHERE productid = %s"
                 cursor.execute(product_sql, [item_id])
@@ -974,10 +974,27 @@ def shopcar_add(request):
                 #另外,item_sum要等於item_price 乘以 item_quantity
                 #這裡的設定要轉型態是因為html用type=number送過來好像不確定會判斷成什麼型態的數字,所以還是要轉?
                 item_sum =item_price * int(quantity)
+                #執行shopitem新增,這是完全沒有的時候的新增狀況
                 sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id,item_price,item_sum )  "
                 sql_shopitem += " VALUES ('%s','%s','%s','%s','%s')"
                 sql_shopitem %= (shopcar_id,quantity,item_id,item_price,item_sum)
-                cursor.execute(sql_shopitem, [])
+                try:
+                    cursor.execute(sql_shopitem, [])
+                   
+                except Exception as e:
+                    print("插入数据时发生错误:", str(e))
+                #執行fetchone()或fetchall()之前都要執行select語句,不然會沒有返回資料可以抓
+                #這裡的抓值應該還好,因為是找對應的購物車裡的商品,現在只會有一筆新的,所以不用特別再索引購物車商品id
+                #當購物車存在時，就要用這個方式先抓出對應的商品索引id,等等如果要修改時，就是要靠購物車id跟商品欄id來抓
+                cursor.execute("SELECT * FROM myapp_shopitem WHERE item_id_id = %s", [shopcar_id])
+                shopitem_get = cursor.fetchone()
+                field_name =cursor.description
+                dict={}
+                i=0
+                for d in shopitem_get:
+                    dict[field_name[i][0]]=d
+                    i=i+1
+                print("新的購物清單",dict)
                 #再來要新增shopsum,關聯是跟shopcar,也是要抓取新的shopsum的pk值.也就是shopcar_id
                 insert_sum_sql =" insert into myapp_shopsum ( sum_id_id ,shop_Totalsum) "
                 insert_sum_sql += " values ('%s','%s') "
@@ -986,76 +1003,278 @@ def shopcar_add(request):
                 insert_sum_sql %= (shopcar_id,sum_Total)
                 #這樣就新增了shop_sum
                 cursor.execute(insert_sum_sql,[])
-                
-
-
                
-
                 return HttpResponse(" shopcar and shopitem added!!")
         else:
-            # 有购物车，直接新增shopitem
+            # 有購物車,必定有shopsum,因為在之前的判斷式已經新增了,但shopitem只是可能用
+            #這裡要先處理的就是當shopitem存在時，要避免因重複而造成的錯誤,要改用update
             #先找到購物車的pk鍵值
             sql_shopcar_check = "SELECT id FROM myapp_shopcar WHERE carid_id = %s"
-            cursor.execute(sql_shopcar_check, [userid])
-            result = cursor.fetchone()
+            cursor.execute(sql_shopcar_check, [userid]) 
+            result_shopcar = cursor.fetchone()
+            #先撈shopcar主鍵出來
+            shopcar_id = result_shopcar[0] 
             print("======== result=======")
-            print(result)
-            # 获取商品的信息
+            print(result_shopcar)
+            # 获取商品的信息,因為現有的shopitem模組裡的資訊不夠?似乎是
             product_sql = "SELECT item_description, item_price, item_photo_image,item_name FROM myapp_product WHERE productid = %s"
             cursor.execute(product_sql, [item_id])
             product_data = cursor.fetchone()
-           
-            
             item_description = product_data[0]
             item_price = product_data[1]
             item_image_photo = product_data[2]
             product_name=product_data[3]
+            #查找已存在的shopitem ,要用shopcar跟product雙關聯當關鍵索引去找,才能找到對的shopitem
+            #這裡的item_id是藉由前端傳過來的productid 這裡的shopcar_id是新增後的shopcar的主鍵
+            shopitem_exsit_sql =" select * from myapp_shopitem where item_id_id='%s' and item_name_id='%s' "
+            shopitem_exsit_sql %=(shopcar_id,item_id)
+            #執行sql語法,確認有無返回shopitem物件,這時返回的應該也是一個tuple
+            cursor.execute(shopitem_exsit_sql,[])
+            #返回物件
+            shopitem_exsit=cursor.fetchone()
+            #這裡要區分shopitem有沒有存在，意思就是,新增不同類的商品要有不同的判斷
+            if not shopitem_exsit:
+                     #當商品欄沒有的時候，表示有不同的商品正在輸入，所以要做的是將這筆商品新增,並將新增的值加入shopsum
+                    #新增不同的商品時,只要在同一個購物車就好
+                    #所以要先找目前對應的購物車,藉由外鍵carid 關聯式carid_id  去對應webUser的主鍵值
+                    current_shopcar_sql ="select id from myapp_shopcar where carid_id='%s' "
+                    current_shopcar_sql %=(userid)#userid是webUser的主鍵值
+                    cursor.execute(current_shopcar_sql,[])
+                    find =cursor.fetchone()
+                    current_carid =find[0]#拿到shopcar的主鍵了,再來要拿product的主鍵
+                    #拿product的主鍵 ,在上面有用item_id去拿到POST的資料,再來要拿新的quantity數量,在上面也拿到POST的資料了
+                    #price也在上面獲得了,只有item_sum要重新計算
+                    current_sum =int(quantity)*int(price)
+                    #該有的參數都有了,就可以執行新增了                
+                    shopitem_insert_sql ="insert into myapp_shopitem (item_id_id,item_name_id,item_quantity,item_price,item_sum)   "
+                    shopitem_insert_sql += " values('%s','%s','%s','%s','%s')"
+                    shopitem_insert_sql %=(current_carid,item_id,quantity,price,current_sum)
+                    cursor.execute(shopitem_insert_sql,[])
+                    #重點來了,這裡新增完以後,要重新獲得這個shopitem的主鍵,這樣才能在後續操作時,不會更新錯商品欄
+                    #這裡查找時，不止要找對shopcar也要找對product的主鍵,才會找到對應的資料
+                    shopitem_reget_sql ="select  id from myapp_shopitem where item_id_id='%s' and item_name_id ='%s' "
+                    shopitem_reget_sql %=(shopcar_id,item_id)
+                    cursor.execute(shopitem_reget_sql,[])
+                    find_shopitem=cursor.fetchone()
+                    new_shopitem_id=find_shopitem[0]#找到新的shopitem的主鍵
+                    #新增沒問題，但是要再執行shopsum的更新,由於是新增,所以不需要將總和扣掉現有值,直接將新增的shopitem現有值加入就好
+                    #撈取目前的總和,當然還是要用外鍵對應的shopcar來使用,也就是shopcar_id,
+                    current_shopsum_sql ="select shop_Totalsum from myapp_shopsum where sum_id_id ='%s' "
+                    current_shopsum_sql %= (shopcar_id)
+                    cursor.execute(current_shopsum_sql,[])
+                    current_shopcar =cursor.fetchone()
+                    print(current_shopcar,"before current_shopcar")
+                    current_Totalsum=current_shopcar[0]
+                    print("current_Totalsum",current_Totalsum)
+                    current_Totalsum += current_sum
+                    #重新將值更新回shopsum裡
+                    #第一種寫法,直接練用語法重新放回資料,這寫法不行,應該是哪裡有問題
+                    # current_shopcar=(current_Totalsum,)
+                    # print(current_shopcar,"current_shopcar")
+                    #第二種寫法,重新用sql語法放回
+                    update_shopsum_sql =" update myapp_shopsum set shop_Totalsum='%s' "
+                    update_shopsum_sql += "where sum_id_id='%s' "
+                    update_shopsum_sql %= (current_Totalsum,shopcar_id)
+                    cursor.execute(update_shopsum_sql,[])
+                    return HttpResponse("新增不同商品")
+            else:
 
-            if result:
-                shopcar_id = result[0]  # 获取shopcar的主键值
-                #有購物車,要先判斷原來的shopitem的id是不是重複，也就是輸入的值item_name有沒有重複,item_name是fk對product,
-                #所以要先用product的主鍵來對應目前的shopitem裡的item_name_id有沒有值
-                shopitem_name_search="select item_name_id from myapp_shopitem where item_id_id ='%s' "
-                shopitem_name_search %=(shopcar_id)
-                cursor.execute(shopitem_name_search,[])
-                shopitem_get =cursor.fetchone()
-                shopid=shopitem_get[0]
-                  #這裡的設定要轉型態是因為html用type=number送過來好像不確定會判斷成什麼型態的數字,所以還是要轉?
-                item_sum =item_price * int(quantity)
-                #判斷shopitem有沒有存在,有就update,沒有就insert into
-                print("item_id",item_id)
-                print("shopid",shopid)
-                #沒有轉型會判斷錯誤,可能因為item_id是用html送過來的,可能都要轉型才會正確
-                if int(item_id) == int (shopid):
-                    shopitem_update ="update myapp_shopitem set item_quantity='%s',item_price='%s',item_sum='%s' "
-                    shopitem_update += "where item_id_id='%s' and item_name_id='%s' "
-                    shopitem_update %= (quantity,item_price,item_sum,shopcar_id,item_id)
-                    cursor.execute(shopitem_update,[])
-                    return HttpResponse("shopitem existed and updated!!")
+                #由於下面的式子需要新的quantity,所以這裡應該要獲得才對,因為現在獲得的值沒有一個適當的索引,所以還是要用欄位重新定位
+                field_shopitem =cursor.description
+                shopitem_dict={}
+                i=0
+                for data in shopitem_exsit:
+                    
+                    
+                    shopitem_dict[field_shopitem[i][0]]=data
+                    i=i+1
+
+                if shopitem_exsit:
+                    #當商品欄有存在時的處理,表示有同樣的商品正在輸入,所以要做的是更改這個商品的quantity重新update
+                    #並且要將原有的shopsum內的總和扣掉原有的商品item_sum,重新以現有的item_sum再加入shopsum
+                    #將上面的shopitem_dict的quantity值取出來
+                    print("shopitem_dict",shopitem_dict)
+                    current_quantity=shopitem_dict["item_quantity"]
+                
+                    current_itemsum =shopitem_dict["item_sum"]#這個是要先扣掉的
+                    
+                    #在處理新的輸入值動作前,要先將現有的shopsum的總和先扣掉
+                    #抓取現在的總和,關聯也是shopcar ,所以用目前抓到的shopcar主鍵shopcar_id索引
+                    shopsum_total_get ="select * from  myapp_shopsum where sum_id_id ='%s' "
+                    shopsum_total_get %= (shopcar_id)
+                    cursor.execute(shopsum_total_get,[])
+                    current_sumTotal =cursor.fetchone()
+                    field_sum =cursor.description
+                    dict_shopsum={}
+                    i=0
+                
+                    for data in current_sumTotal:
+                        
+                        dict_shopsum[field_sum[i][0]]=data
+                        i=i+1
+                    current_Totalsum=dict_shopsum["shop_Totalsum"]#抓到現有的總和
+                    
+                    current_Totalsum -= current_itemsum#減掉目前的小計
+                
+                    dict_shopsum["shop_Totalsum"]=current_Totalsum#再重新放到總和去
+
+                    print("在還沒處理前的current_Totalsum",current_Totalsum)
+                    print("在還沒處理前的current_itemsum",current_itemsum)
+                    
+                    #接下來針對更改的部份去update
+                    #先更新shopitem ,這裡要把新輸入的quantity代入,也就是request.POST獲得的部份
+                    #這裡重新代入的item_sum應該要計算前端送過來的quantity跟product裡的price相乘的結果
+                    #這裡的item_price是透過POST截取傳來的產品價格
+                    #但前端傳來的資訊要透過int轉型才能用,不然的話,不是後端可以處理的數值型態
+                    current_itemsum=int(quantity) *item_price
+                    shopitem_update_sql ="update myapp_shopitem  set item_quantity='%s' ,item_sum ='%s'"
+                    shopitem_update_sql += " where item_id_id='%s' and item_name_id='%s'  "
+                    shopitem_update_sql %=(quantity,current_itemsum,shopcar_id,item_id)
+                    cursor.execute(shopitem_update_sql,[])
+                    #我們需要重新獲得的小計,所以要再查找一次shopitem
+                    #檢查一下進總和前的變數是不是對的
+                    print("current_Totalsum",current_Totalsum)
+                    print("current_itemsum",current_itemsum)
+                    shopitem_repost_sql="select item_sum from myapp_shopitem " 
+                    shopitem_repost_sql +=" where item_id_id='%s' and item_name_id='%s' "
+                    shopitem_repost_sql %=(shopcar_id,item_id)
+                    cursor.execute(shopitem_repost_sql,[])
+                    shopitem_new =cursor.fetchone()
+                    shopitem_sum =shopitem_new[0]
+                    print("shopitem_sum",shopitem_sum)
+                    #再來是修訂shopsum，在執行之前記得先把item_sum先扣掉，我們上面的式子已經處理完扣掉的部份了.
+                    #接下來就是處理新增的部份,由於新增需要有新的item_sum小計,所要要記得重新抓
+                    current_Totalsum +=shopitem_sum# 將新的小計重新加到總和裡
+                    update_shopsum_sql =" update myapp_shopsum  set  shop_Totalsum ='%s'  "
+                    update_shopsum_sql += " where sum_id_id='%s' "
+                    update_shopsum_sql %=(current_Totalsum,shopcar_id)
+                    cursor.execute(update_shopsum_sql,[])
+
+                    
+                    print("=====update原有商品====")
+                    return HttpResponse("update原有商品")
                 else:
-                    sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id,item_price,item_sum )  "
-                    sql_shopitem += " VALUES ('%s','%s','%s','%s','%s')"
-                    sql_shopitem %= (shopcar_id,quantity,item_id,item_price,item_sum)
-                    cursor.execute(sql_shopitem, [])
-                    #再來要新增shopsum,關聯是跟shopcar,也是要抓取新的shopsum的pk值.也就是shopcar_id
-                    #理論上,若已經有購物車,表示有一個唯一的shopsum存在,必須有判斷式判斷若shopsum存在,則使用update
-                    sumTotal_id_search =" select id , shop_Totalsum from myapp_shopsum where sum_id_id = '%s' "
-                    sumTotal_id_search %=(shopcar_id)
-                    cursor.execute(sumTotal_id_search,[])
-                    sum_result =cursor.fetchone()
                    
-                    if sum_result:        
-                        update_sum_sql =" update myapp_shopsum SET  shop_Totalsum ='%s' where sum_id_id='%s' "
-                        
-                        sum_Total=sum_result[1]#找到已存在的總和
-                        
-                        sum_Total += item_sum
-                        update_sum_sql %= (sum_Total,shopcar_id)
-                        cursor.execute(update_sum_sql,[])
+                    
+                  
+                    return HttpResponse("商品不存在!!")
+                
+            
 
-                        return HttpResponse("new shopitem  added and shopsum updated!!")
-                    else:
-                        return HttpResponse("new shopitem  added and shopsum not updated!!")
+
+            #所以重新修正數字可能會出錯，因為可能改到同樣購物車裡的其他商品資訊
+            #目前是以單一商品來修改，所以暫時還不會出錯，可以順利完成資料修訂
+
+            # if result_shopcar:
+            #     shopcar_id = result_shopcar[0]  # 获取shopcar的主键值
+            #     #有購物車,要先判斷原來的shopitem的id是不是重複，也就是輸入的值item_name有沒有重複,item_name是fk對product,
+            #     #所以要先用product的主鍵來對應目前的shopitem裡的item_name_id有沒有值
+
+            #     #當購物車存在時，有哪些狀況?shopitem跟shopsum這時都會有值?不一定，因為第1次進判斷式時，shopsum可能還不存在
+            #     #所以我們要在這裡先判斷shopsum存不存在，用shopcar當索引值去找,把需要欄位都找出來
+            #     search_shopsum =" select   id,shop_Totalsum  from myapp_shopsum where  sum_id_id ='%s' "
+            #     search_shopsum %=(shopcar_id)
+            #     #執行SQL語法
+            #     cursor.execute(search_shopsum,[])
+            #     #先確定物件有沒有存在
+            #     shopsum_exist =cursor.fetchone()
+            #     if shopsum_exist:
+            #         return HttpResponse("總和欄位已存在!!!")
+            #     else:
+            #         #不存在就新增shopsum,要用shopcar去對應
+            #         shopsum_add_sql=" insert into myapp_shopsum set  (shop_Totalsum) "
+            #         shopsum_add_sql += " values ('%s') where sum_id_id ='%s' "
+            #         shopsum_add_sql %=("",shopcar_id)
+
+
+
+               
+                
+
+            #     #目前這裡的search方式可能有問題,只指定了購物車,但是沒有指定shopitem的id
+            #     #要怎麼找到對應的shopitem的id? 可以用購物車+商品的id去找,就可以找到特定的shopitem的id!!!
+            #     shopitem_name_search="select * from myapp_shopitem where item_id_id ='%s' "
+            #     shopitem_name_search %=(shopcar_id)
+            #     cursor.execute(shopitem_name_search,[])
+            #     #有購物車的情況下,應該要用fetchall()才能找到所有資料
+            #     shopitem_get =cursor.fetchall()
+            #     field_name =cursor.description
+            #     new_list=[]
+            #     for data in shopitem_get:
+            #         dict={}
+            #         i=0
+            #         for d in data:
+            #             dict[field_name[i][0]]=d
+            #             i=i+1
+            #         new_list.append(dict)
+            #     print("購物車存在的情況下,找到的shopitem的字典",dict)
+            #     print("當購物車存在的情況下,找到的shopitem內資料",new_list)
+            #     #但有購物車的情況下，不見得只會有一筆商品,所以目前的都會取到第1組商品，這不對
+            #     #所以不能只對購物車的id,也要對product的id,這樣找到的shopitem才會是目標值
+            #     shopid=shopitem_get[0][5]
+            #       #這裡的設定要轉型態是因為html用type=number送過來好像不確定會判斷成什麼型態的數字,所以還是要轉?
+            #     item_sum =item_price * int(quantity)
+            #     #判斷shopitem有沒有存在,有就update,沒有就insert into
+            #     print("item_id",item_id)
+            #     print("shopid",shopid)
+            #     #沒有轉型會判斷錯誤,可能因為item_id是用html送過來的,可能都要轉型才會正確
+            #     if int(item_id) == shopid:
+            #         #不對,現有的式子是當目前的購物車相同的情況下
+            #         shopitem_update ="update myapp_shopitem set item_quantity='%s',item_price='%s',item_sum='%s' "
+            #         shopitem_update += "where item_id_id='%s' and item_name_id='%s' "
+            #         shopitem_update %= (quantity,item_price,item_sum,shopcar_id,item_id)
+            #         cursor.execute(shopitem_update,[])
+            #         #這裡應該要新增至shopsum加總,不然會出錯,但因為是更換了原有的item 數量,所以理論上要把總和清掉重撈?不行,因為會有其他組的shopitem,但不清掉的話會出錯
+            #         #所以要在執行新的指令之前，先把現有對應的shopitem_sum撈出來扣掉,where的位置要指定shopcar 跟product(因為這個不重複)
+
+            #         #也就是要重新撈現有的shopitem的item_sum 
+            #         #要加總的話，因為已經有新的shopsum,所以只用關聯的外鍵shopcar_id進去撈shopsum有沒有對應的id鍵,然後用這組id鍵update
+            #         shopsum_id_search_sql ="select id,shop_Totalsum from myapp_shopsum where sum_id_id = '%s' "
+            #         shopsum_id_search_sql %=(shopcar_id)
+            #         cursor.execute(shopsum_id_search_sql,[])
+            #         current_shopsumid_dict =cursor.fetchone()
+            #         current_shopsumid=current_shopsumid_dict[0]#找到id
+            #         current_Totalsum=current_shopsumid_dict[1]#找到Totalsum
+            #         #我也要找到現在shopitem裡的item_sum
+            #         shopitem_sumsearch_sql=" select id,item_sum  from myapp_shopitem where item_id_id='%s' and item_name_id='%s' "
+            #         shopitem_sumsearch_sql %= (shopcar_id,item_id )
+            #         cursor.execute(shopitem_sumsearch_sql,[])
+            #         current_shopitem =cursor.fetchone()
+            #         current_shopitem_id=current_shopitem[0]
+            #         current_shopitem_sum=current_shopitem[1]
+
+            #         shopsum_update_sql ="update myapp_shopsum set shop_Totalsum='%s'  where id ='%s' "
+            #         current_Totalsum += current_shopitem_sum
+            #         shopsum_update_sql %=(current_Totalsum,current_shopitem_id)
+            #         cursor.execute(shopsum_update_sql,[])
+
+
+
+            #         return HttpResponse("shopitem existed and updated!!")
+            #     else:
+            #         sql_shopitem = "INSERT INTO myapp_shopitem (item_id_id,item_quantity,item_name_id,item_price,item_sum )  "
+            #         sql_shopitem += " VALUES ('%s','%s','%s','%s','%s')"
+            #         sql_shopitem %= (shopcar_id,quantity,item_id,item_price,item_sum)
+            #         cursor.execute(sql_shopitem, [])
+            #         #再來要新增shopsum,關聯是跟shopcar,也是要抓取新的shopsum的pk值.也就是shopcar_id
+            #         #理論上,若已經有購物車,表示有一個唯一的shopsum存在,必須有判斷式判斷若shopsum存在,則使用update
+            #         sumTotal_id_search =" select id , shop_Totalsum from myapp_shopsum where sum_id_id = '%s' "
+            #         sumTotal_id_search %=(shopcar_id)
+            #         cursor.execute(sumTotal_id_search,[])
+            #         sum_result =cursor.fetchone()
+                   
+            #         if sum_result:        
+            #             update_sum_sql =" update myapp_shopsum SET  shop_Totalsum ='%s' where sum_id_id='%s' "
+                        
+            #             sum_Total=sum_result[1]#找到已存在的總和
+                        
+            #             sum_Total += item_sum
+            #             update_sum_sql %= (sum_Total,shopcar_id)
+            #             cursor.execute(update_sum_sql,[])
+
+            #             return HttpResponse("new shopitem  added and shopsum updated!!")
+            #         else:
+            #             return HttpResponse("new shopitem  added and shopsum not updated!!")
 
     else:
 
@@ -1067,7 +1286,7 @@ def shopcar_add(request):
                
 from django.db import connection
 from .models import shopcar, shopitem
-
+#購物車顯示
 def shopcar_show(request):
     #這裡要去抓shopitem裡的資料
     #當然啦,一開始要驗證有沒有權限
@@ -1075,13 +1294,13 @@ def shopcar_show(request):
         #抓資料
         #連結資料庫
         cursor=connections["default"].cursor()
-        #先找shopcar當時的id
+        #先找shopcar當時的id,用關聯式的webUser主鍵去找
         sql_shopcar_search ="select id from myapp_shopcar where carid_id ='%s' "
-        carid=request.user.id
+        carid=request.user.id#這裡已經找到webUser的主鍵
         sql_shopcar_search %= (carid)
         cursor.execute(sql_shopcar_search,[])
         result_carid =cursor.fetchone()
-        current_carid=result_carid[0]
+        current_carid=result_carid[0]#這裡獲得的是shopcar的主鍵
         #把找到的carid 當成搜尋條件
         sql_shopitem_get ="select * from myapp_shopitem where item_id_id ='%s' "
         sql_shopitem_get %=(current_carid)
@@ -1089,37 +1308,136 @@ def shopcar_show(request):
         current_shopitems=cursor.fetchall()
         field_name=cursor.description
         #放到新的list
-        
-
+        print("===查看目前資料===")
+     
+     
         new_shopitem_list=[]
         for data in current_shopitems:
             item={}
             i=0
-            print("===查看目前資料===")
-            print(data)#我要的是item_name的值
-            product_id =data[1]#第0個位置
-            #但目前的資料少了product裡的item_name,所以要從product裡撈出來,而不同的prodcutid要用foreach撈出來
-            sql_product_search =" select item_name,item_photo_image from myapp_product where productid ='%s'  "
-            sql_product_search %=(product_id)
-            cursor.execute(sql_product_search,[])
-            prod =cursor.fetchone()
-            pro=prod[0]#這樣才能取乾淨的值
-            image=prod[1]#取圖片資料
-            print(pro)#到這裡就用pro把資料撈出來了
-            for d in data:
+            #應該在這個位置獲得item_name_id的值,再去找對應的product
+            productid =data[5]#獲得不同的productid
+            #執行sql語法查詢
+            current_product_sql =" select * from myapp_product where productid='%s' "
+            current_product_sql %=(productid)
+            cursor.execute(current_product_sql,[])
+            product_list=cursor.fetchall()
+           # print("product_list",product_list)#到這裡為止是雙層tuple
+            product_num=product_list[0][0]
+            product_name=product_list[0][1]
+            product_description=product_list[0][2]
+            product_price =product_list[0][3]               
+            for d  in data:
                 item[field_name[i][0]]=d
-                 # 通过关联属性访问关联的Product对象,用sql就是無法顯示圖片
-                produ = product.objects.get(productid=data[1])
-                item['pro'] = produ.item_name
-                item['image'] = produ.item_photo_image
-                # item["pro"]=pro#存值進dict裡
-                # item["image"]=image
                 i=i+1
+                
+            item["product_num"]=product_num
+            item["product_name"]=product_name
+            item["product_description"]=product_description
+            item["product_description"]=product_description
+            item["product_price"]=product_price
+            # #ORM 取值,圖片只能這樣取值
+             
+            orm_product =product.objects.filter(productid=productid)
+            for product_obj in orm_product:
+                item_photo_image = product_obj.item_photo_image
+                # 将 item_photo_image 放入 item 字典
+                item["product_image"] = item_photo_image
+            
+            
+
             new_shopitem_list.append(item)
+        print(new_shopitem_list,"new_shopitem_list")
+           
+          
+        #    # print(pro)#到這裡就用pro把資料撈出來了
+        #     for d in data:
+        #         item[field_name[i][0]]=d
+        #             # 通过关联属性访问关联的Product对象,用sql就是無法顯示圖片
+        #             # 下面的操作要擺在迴圈裡,才會隨著i=i+1 找到不同的商品
+        #         product_id =data[1]#第2個位置,找到當時product的主鍵
+        #         print(d,"D各元素")
+        #         print(product_id,"product_id")
+        #         #但目前的資料少了product裡的item_name,所以要從product裡撈出來,而不同的prodcutid要用foreach撈出來
+        #         #這裡要反向思考，直接撈
+
+        #         sql_product_search =" select item_name,item_photo_image from myapp_product where productid ='%s'  "
+        #         sql_product_search %=(product_id)
+        #         cursor.execute(sql_product_search,[])
+        #         prod =cursor.fetchone()
+        #         pro=prod[0]#這樣才能取乾淨的值
+        #         image=prod[1]#取圖片資料
+        #         produ = product.objects.get(productid=data[1])
+        #         item['pro'] = produ.item_name
+        #         item['image'] = produ.item_photo_image
+        #         # item["pro"]=pro#存值進dict裡
+        #         # item["image"]=image
+        #         i=i+1
+        #     new_shopitem_list.append(item)
+        #     print(new_shopitem_list)
         
         
         
         return render(request,"shopcar_show.html",{"new_shopitem_list":new_shopitem_list})
     else:
         return HttpResponse("no right to access")
+
+def shopitem_action(request):
+    if request.user.is_authenticated:
+        if request.method == "POST":
+            #先連結資料庫,等等可以用
+            cursor=connections["default"].cursor()
+            #依輸入框的變動,決定要執行什麼動作
+            #先獲取目前的輸入值
+            input_shopitem_id=request.POST["item_id"]
+            print("input_shopitem_id:",input_shopitem_id)
+            input_item_name=request.POST["item_name"]
+            input_price=request.POST["price"]
+            input_quantity=request.POST["quantity"]
+            actionType =request.POST["action_type"]
+            print(actionType)
+            if actionType == "delete":
+                shopitem_delete_sql =" delete  from myapp_shopitem where id ='%s' "
+                shopitem_delete_sql %=(input_shopitem_id)
+                cursor.execute(shopitem_delete_sql,[])
+                return redirect("/shopcar_show")
+
+
+            #要比對的只有quantity的數量,再從原本的shopitem裡撈指定quantity出來
+            object =shopitem.objects.filter(item_id=input_shopitem_id)
+            print(object)
+            #假若值相等,也就是沒有變
+            if object[3] == int(input_quantity):
+                #當數量相同時,就送出訂單
+                return render(request,"shopitem_action.html",locals())
+            else:
+                #當數量不同時,就修正原有值,update,同理,要更新要先找到對應的shopitem的id 及item_id_id與item_name_id
+
+                update_quantity_sql=" update  from myapp_shopitem set item_quantity ='%s' where id = '%s'  "
+                update_quantity_sql %=(input_quantity,input_shopitem_id)
+                cursor.execute(update_quantity_sql,[])
+                #取回現有的值
+                current_shopitem =cursor.fetchon()
+                #取欄位名
+                field_name = cursor.description
+                #重新放值
+                new_shopitem_list=[]
+                for data in current_shopitem:
+                    i=0
+                    dict={}
+                    for d in data:
+                        dict[field_name[i][0]]=d
+                        i=i+1
+                    new_shopitem_list.append(dict)
+
+                return render(request,"shopcar_show.html",{"new_shopitem_list":new_shopitem_list})
+            
+            
+        else:
+            return HttpResponse("wrong method")
+        
+       
+    else:
+
+         return HttpResponse("no permission")
         

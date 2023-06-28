@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from myapp import views
 
-#è¦??? media???è©?,è¦??? è¨­å®?
+#è¦å°å…¥mediaéœ€è¦ä½¿ç”¨çš„import
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -60,6 +60,7 @@ urlpatterns = [
     path("product_select/<str:id>",views.buy_select),
     path("shopcar",views.shopcar_add),
     path("shopcar_show",views.shopcar_show),
+    path("shopitem_action",views.shopitem_action),
    
     
   

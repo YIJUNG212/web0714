@@ -8,10 +8,11 @@
       <div class="card" style="width: 18rem;">
         <img src="{{ pro_select.item_photo_path }}" width="300" height="300"/>
         <div class="card-body">
-          <h5 class="card-title" >{{ pro_select.item_name }}</h5>
-          <p class="card-text"   >{{ pro_select.productid }}</p>
+          <h5 class="card-title" >品名:{{ pro_select.item_name }}</h5>
+          <p class="card-text"   >產品編號:{{ pro_select.productid }}</p>
           <input type="hidden" name="item_name" value="{{ pro_select.item_name }}">
           <input type="hidden" name="item_id" value="{{ pro_select.productid }}">
+          <input type="hidden" name="price" value="{{ pro_select.item_price }}">
 
           <p class="card-text"  >{{ pro_select.item_description }}</p>
           <p class="card-text"  >{{ pro_select.item_price }}</p>
