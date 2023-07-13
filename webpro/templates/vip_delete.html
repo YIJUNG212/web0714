@@ -18,7 +18,7 @@ border:sloid red 10px;
 
 }
 .leftbutton{  
-  margin:10px 100px 20px 650px;
+  margin:10px 100px 20px 720px;
  }
 
 {% endblock %}
@@ -28,10 +28,10 @@ border:sloid red 10px;
 <table class="delform">
 {% csrf_token %}
 <tr>
-<td >帳�??:&nbsp&nbsp&nbsp   <span>{{ field_data.username }}</span ></td>
+<td >帳號:&nbsp&nbsp&nbsp   <span>{{ field_data.username }}</span ></td>
 </tr>
 <tr>
-<td>??�好:&nbsp&nbsp&nbsp <span>{{ field_data.hobit  }}</span></td>
+<td>嗜好:&nbsp&nbsp&nbsp <span>{{ field_data.hobit  }}</span></td>
 </tr>
 <tr>
 <td>first_name:&nbsp&nbsp&nbsp <span>{% if field_data.first_name == '' %}None{% else %}{{ field_data.first_name }}{% endif %}</span></td>

@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from myapp import views
 
-#要導入media需要使用的import
+#要使用動態upload的media,必須調用下列的方法
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -61,6 +61,13 @@ urlpatterns = [
     path("shopcar",views.shopcar_add),
     path("shopcar_show",views.shopcar_show),
     path("shopitem_action",views.shopitem_action),
+    path("api_test",views.api_test),
+    path("api_webUser_get",views.api_webUser_get),
+    path("api_webuser_getall/<str:userid>",views.api_webuser_getall),
+    path("api_product_getall/<str:userid>",views.api_product_getall),
+    path("worldmap",views.worldmap),
+
+    
    
     
   
@@ -68,4 +75,6 @@ urlpatterns = [
 
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
 

@@ -1,0 +1,21 @@
+import json
+#我是json的字符串
+string_a='{"car":80}'#這裡要用KV值,使用:分開
+json_b=("car","blue")#我是tuple
+json_c={"plane":"噴射","color":"red"}#我是dict
+json_d=["abc",123,]#我是list,元件可以不同
+json_e=["abc","def"]#我是array，元件必須相同
+#透過loads轉成json格式
+a=json.loads(string_a)
+#透過dumps轉成json樣式的字符串
+b=json.dumps(json_b)
+c=json.dumps(json_c,ensure_ascii=False)
+d=json.dumps(json_d)
+e=json.dumps(json_e)
+#用逗號會自動空一格
+print("透過loads轉成json格式的object",a)
+#用+號是將兩邊視為字符串，並組成一個新的字符串
+print("tuple透過dumps轉成json格式的string"+b)
+print("dict透過dumps轉成json格式的string"+c)#
+print("list透過dumps轉成json格式的string"+d)#
+print("array透過dumps轉成json格式的string"+e)#

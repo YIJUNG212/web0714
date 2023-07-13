@@ -10,6 +10,7 @@ def base(request):
 def css_index(request):
     return render (request,"cssindex.html",locals())
 def index(request):
+    username = request.user.username
     return render(request,"index.html",locals())
 def vip(request):
     if "username" in request.session:
@@ -110,31 +111,53 @@ def webuser_update(request,id=None,mode=None):
         #這裡使用password ==""  而不是password  is None是因為,空白也是值,所以用is None會得不到我們相要的結果
         #除非今天是一個response的結果,就可能有機會是空值,而不是空白,這時就可以用is None
         #當傳送過來的密碼是空值時,就套用資料庫內的密碼
-        if password =="":
-            password = request.user.password
-            password_confirm=password
-            #當有新的輸入密碼,就將密碼換成新輸入的
-        else:
-            password=request.POST.get("password")
-            password_confirm=request.POST.get("password_confirm")
-        if password == "" or password_confirm == "" :
-            return HttpResponse("Please enter your new password!")
-        elif password != password_confirm:
-            return HttpResponse("Password and password confirmation do not match!")
-        else:
-            #當不是空值就使用sql語法update set
-            # 將密碼轉換為哈希值
-            hashed_password = make_password(password)
+        if not password:
+            
+            hashed_password = request.user.password
         
             sql ="update myapp_webuser set  "
-            sql += " password='%s', phone='%s', addr='%s', hobit='%s',first_name='%s',last_name='%s', date_joined=now() "
+            sql += " password='%s', phone='%s', addr='%s', hobit='%s',first_name='%s',last_name='%s' "
             sql += " where id ='%s'"
             sql %= (hashed_password,phone,addr,hobit,first_name,last_name,userid)
-            print("&&&&&&&&&&&&&&&&&sql 語法&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-            print(sql)
+        
             #update myapp_webuser set   password='yrtgil215', phone='0988118281', addr='台中巿', hobit='Working', date_joined=now()  where id ='9'
             cursor.execute(sql,[])
             return redirect("/webuser_admin")
+           
+        elif  password == "":
+            hashed_password = request.user.password
+        
+            sql ="update myapp_webuser set  "
+            sql += " password='%s', phone='%s', addr='%s', hobit='%s',first_name='%s',last_name='%s' "
+            sql += " where id ='%s'"
+            sql %= (hashed_password,phone,addr,hobit,first_name,last_name,userid)
+        
+            #update myapp_webuser set   password='yrtgil215', phone='0988118281', addr='台中巿', hobit='Working', date_joined=now()  where id ='9'
+            cursor.execute(sql,[])
+            return redirect("/webuser_admin")
+        else:
+            if password_confirm == "":
+                return HttpResponse("enter password_confirm")
+            elif not password_confirm:
+                 return HttpResponse("ur password_confirm in blank")
+
+            elif password != password_confirm:
+                return HttpResponse("Password and password confirmation do not match!")
+            elif  password == password_confirm:
+                #當不是空值就使用sql語法update set
+                # 將密碼轉換為哈希值
+                hashed_password = make_password(password)
+            
+                sql ="update myapp_webuser set  "
+                sql += " password='%s', phone='%s', addr='%s', hobit='%s',first_name='%s',last_name='%s' "
+                sql += " where id ='%s'"
+                sql %= (hashed_password,phone,addr,hobit,first_name,last_name,userid)
+             
+                #update myapp_webuser set   password='yrtgil215', phone='0988118281', addr='台中巿', hobit='Working', date_joined=now()  where id ='9'
+                cursor.execute(sql,[])
+                return redirect("/webuser_admin")
+            else:
+                return HttpResponse("input error!!!")
     elif mode == "load":
          #進來一樣想看到選定的使用者資料,所以這裡要先處理資料獲得
         userid = id
@@ -1293,92 +1316,96 @@ def shopcar_show(request):
     if request.user.is_authenticated:
         #抓資料
         #連結資料庫
-        cursor=connections["default"].cursor()
-        #先找shopcar當時的id,用關聯式的webUser主鍵去找
-        sql_shopcar_search ="select id from myapp_shopcar where carid_id ='%s' "
-        carid=request.user.id#這裡已經找到webUser的主鍵
-        sql_shopcar_search %= (carid)
-        cursor.execute(sql_shopcar_search,[])
-        result_carid =cursor.fetchone()
-        current_carid=result_carid[0]#這裡獲得的是shopcar的主鍵
-        #把找到的carid 當成搜尋條件
-        sql_shopitem_get ="select * from myapp_shopitem where item_id_id ='%s' "
-        sql_shopitem_get %=(current_carid)
-        cursor.execute(sql_shopitem_get,[])
-        current_shopitems=cursor.fetchall()
-        field_name=cursor.description
-        #放到新的list
-        print("===查看目前資料===")
-     
-     
-        new_shopitem_list=[]
-        for data in current_shopitems:
-            item={}
-            i=0
-            #應該在這個位置獲得item_name_id的值,再去找對應的product
-            productid =data[5]#獲得不同的productid
-            #執行sql語法查詢
-            current_product_sql =" select * from myapp_product where productid='%s' "
-            current_product_sql %=(productid)
-            cursor.execute(current_product_sql,[])
-            product_list=cursor.fetchall()
-           # print("product_list",product_list)#到這裡為止是雙層tuple
-            product_num=product_list[0][0]
-            product_name=product_list[0][1]
-            product_description=product_list[0][2]
-            product_price =product_list[0][3]               
-            for d  in data:
-                item[field_name[i][0]]=d
-                i=i+1
+        if not  request:
+            return HttpResponse("你還沒選購東西喔!!") 
+        else:
+            
+            cursor=connections["default"].cursor()
+            #先找shopcar當時的id,用關聯式的webUser主鍵去找
+            sql_shopcar_search ="select id from myapp_shopcar where carid_id ='%s' "
+            carid=request.user.id#這裡已經找到webUser的主鍵
+            sql_shopcar_search %= (carid)
+            cursor.execute(sql_shopcar_search,[])
+            result_carid =cursor.fetchone()
+            current_carid=result_carid[0]#這裡獲得的是shopcar的主鍵
+            #把找到的carid 當成搜尋條件
+            sql_shopitem_get ="select * from myapp_shopitem where item_id_id ='%s' "
+            sql_shopitem_get %=(current_carid)
+            cursor.execute(sql_shopitem_get,[])
+            current_shopitems=cursor.fetchall()
+            field_name=cursor.description
+            #放到新的list
+            print("===查看目前資料===")
+        
+        
+            new_shopitem_list=[]
+            for data in current_shopitems:
+                item={}
+                i=0
+                #應該在這個位置獲得item_name_id的值,再去找對應的product
+                productid =data[5]#獲得不同的productid
+                #執行sql語法查詢
+                current_product_sql =" select * from myapp_product where productid='%s' "
+                current_product_sql %=(productid)
+                cursor.execute(current_product_sql,[])
+                product_list=cursor.fetchall()
+            # print("product_list",product_list)#到這裡為止是雙層tuple
+                product_num=product_list[0][0]
+                product_name=product_list[0][1]
+                product_description=product_list[0][2]
+                product_price =product_list[0][3]               
+                for d  in data:
+                    item[field_name[i][0]]=d
+                    i=i+1
+                    
+                item["product_num"]=product_num
+                item["product_name"]=product_name
+                item["product_description"]=product_description
+                item["product_description"]=product_description
+                item["product_price"]=product_price
+                # #ORM 取值,圖片只能這樣取值
                 
-            item["product_num"]=product_num
-            item["product_name"]=product_name
-            item["product_description"]=product_description
-            item["product_description"]=product_description
-            item["product_price"]=product_price
-            # #ORM 取值,圖片只能這樣取值
-             
-            orm_product =product.objects.filter(productid=productid)
-            for product_obj in orm_product:
-                item_photo_image = product_obj.item_photo_image
-                # 将 item_photo_image 放入 item 字典
-                item["product_image"] = item_photo_image
+                orm_product =product.objects.filter(productid=productid)
+                for product_obj in orm_product:
+                    item_photo_image = product_obj.item_photo_image
+                    # 将 item_photo_image 放入 item 字典
+                    item["product_image"] = item_photo_image
+                
+                
+
+                new_shopitem_list.append(item)
+            print(new_shopitem_list,"new_shopitem_list")
             
             
+            #    # print(pro)#到這裡就用pro把資料撈出來了
+            #     for d in data:
+            #         item[field_name[i][0]]=d
+            #             # 通过关联属性访问关联的Product对象,用sql就是無法顯示圖片
+            #             # 下面的操作要擺在迴圈裡,才會隨著i=i+1 找到不同的商品
+            #         product_id =data[1]#第2個位置,找到當時product的主鍵
+            #         print(d,"D各元素")
+            #         print(product_id,"product_id")
+            #         #但目前的資料少了product裡的item_name,所以要從product裡撈出來,而不同的prodcutid要用foreach撈出來
+            #         #這裡要反向思考，直接撈
 
-            new_shopitem_list.append(item)
-        print(new_shopitem_list,"new_shopitem_list")
-           
-          
-        #    # print(pro)#到這裡就用pro把資料撈出來了
-        #     for d in data:
-        #         item[field_name[i][0]]=d
-        #             # 通过关联属性访问关联的Product对象,用sql就是無法顯示圖片
-        #             # 下面的操作要擺在迴圈裡,才會隨著i=i+1 找到不同的商品
-        #         product_id =data[1]#第2個位置,找到當時product的主鍵
-        #         print(d,"D各元素")
-        #         print(product_id,"product_id")
-        #         #但目前的資料少了product裡的item_name,所以要從product裡撈出來,而不同的prodcutid要用foreach撈出來
-        #         #這裡要反向思考，直接撈
-
-        #         sql_product_search =" select item_name,item_photo_image from myapp_product where productid ='%s'  "
-        #         sql_product_search %=(product_id)
-        #         cursor.execute(sql_product_search,[])
-        #         prod =cursor.fetchone()
-        #         pro=prod[0]#這樣才能取乾淨的值
-        #         image=prod[1]#取圖片資料
-        #         produ = product.objects.get(productid=data[1])
-        #         item['pro'] = produ.item_name
-        #         item['image'] = produ.item_photo_image
-        #         # item["pro"]=pro#存值進dict裡
-        #         # item["image"]=image
-        #         i=i+1
-        #     new_shopitem_list.append(item)
-        #     print(new_shopitem_list)
-        
-        
-        
-        return render(request,"shopcar_show.html",{"new_shopitem_list":new_shopitem_list})
+            #         sql_product_search =" select item_name,item_photo_image from myapp_product where productid ='%s'  "
+            #         sql_product_search %=(product_id)
+            #         cursor.execute(sql_product_search,[])
+            #         prod =cursor.fetchone()
+            #         pro=prod[0]#這樣才能取乾淨的值
+            #         image=prod[1]#取圖片資料
+            #         produ = product.objects.get(productid=data[1])
+            #         item['pro'] = produ.item_name
+            #         item['image'] = produ.item_photo_image
+            #         # item["pro"]=pro#存值進dict裡
+            #         # item["image"]=image
+            #         i=i+1
+            #     new_shopitem_list.append(item)
+            #     print(new_shopitem_list)
+            
+            
+            
+            return render(request,"shopcar_show.html",{"new_shopitem_list":new_shopitem_list})
     else:
         return HttpResponse("no right to access")
 
@@ -1440,4 +1467,121 @@ def shopitem_action(request):
     else:
 
          return HttpResponse("no permission")
+#要解除特定函式的csrf保護,要調用這個方法,然後用裝飾器放上去
+#這是要讓外部進來的資料能夠使用POST方式對資料庫進行修改動作
+#這個函式的意義就在於提供外部輸入資料時，可以執行sql語法的insert into新增資料
+#當然也可以在同一個url設定<str:mode> 或是<str:userid>之類的,然後在前端藉由輸入不同的路徑,提供參數給這個函式,以觸發不同的CRUD動作
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+def api_test(request,mode=None):
+    try:
+        if request.method == "GET":
+            username=request.GET["username"]
+            password=request.GET["password"]
+            hashpasswd=make_password(password)
+            #hashpasswd=password  這裡發現密碼不是用哈希法生成的,無法順利新增進user資料表，應該是現有的資料表有設定
+            phone=request.GET["phone"]
+            addr=request.GET["addr"]
+            hobit=request.GET["hobit"]
+            superuser=request.GET["is_superuser"]
+            first_name=request.GET["first_name"]
+            last_name=request.GET["last_name"]
+            email=request.GET["email"]
+            staff=request.GET["is_staff"]
+            active=request.GET["is_active"]
+           
+            print("get")
+            
+        elif request.method == "POST":
+            username=request.POST["username"]
+            password=request.POST["password"]
+            hashpasswd=make_password(password)
+            #hashpasswd=password  這裡發現密碼不是用哈希法生成的,無法順利新增進user資料表，應該是現有的資料表有設定
+            phone=request.POST["phone"]
+            addr=request.POST["addr"]
+            hobit=request.POST["hobit"]
+            superuser=request.POST["is_superuser"]
+            first_name=request.POST["first_name"]
+            last_name=request.POST["last_name"]
+            email=request.POST["email"]
+            staff=request.POST["is_staff"]
+            active=request.POST["is_active"]
         
+
+    except:
+           return HttpResponse("method error")
+    try:
+        #當判斷get或post方法以後,執行下列程式
+        cursor=connections["default"].cursor()
+        # sql ="insert into  myapp_webUser (username,password,phone,addr,hobit,is_superuser,first_name,last_name,email,is_staff,is_active,date_joined,join_date) "
+        # sql += " values('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s',now(),now() )"
+        # sql %= (username,password,phone,addr,hobit,is_superuser,first_name,last_name,email,is_staff,is_active)
+        
+        sql="insert into myapp_webuser(username,password,phone,addr,hobit,is_superuser,first_name,last_name,email,is_staff,is_active,date_joined,join_date)"
+        sql += " values('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s',now(),now()) "
+        sql %= (username,hashpasswd,phone,addr,hobit,superuser,first_name,last_name,email,staff,active)
+        cursor.execute(sql,[])
+        cursor.close()
+        return HttpResponse("added successfully!!")
+    except:
+    
+          
+        return HttpResponse("added error")
+   
+       
+from django.http import JsonResponse       
+def api_webUser_get(request):
+    result =webUser.objects.all()
+    resultList =list(result.values())
+    print("QuerrySet    ")
+    print(result)
+    print("result.values()   ")
+    print(result.values())
+    print("list(result.values())   ")
+    print(list(result.values()))
+    print("resultList   ")
+    print(resultList)
+    #safe要設定為False才能將資料傳出去,一旦設定為True,就只能傳字典格式,由於現在的資料是包含多個字典的字典組,不是單純的字典格式，所以設定為True反而會出錯
+    return JsonResponse(resultList,safe=False)
+
+#練習用
+from django.http import JsonResponse
+def api_webuser_getall(request,userid=None):
+    if request.user.is_authenticated:
+        userid_db=request.user.username
+        #下面的判斷式如果放到java或javascript裡,就需要做轉型,轉成string,但py不用
+        userid_current=userid
+        if userid_db == userid_current:
+            result =webUser.objects.all()
+            resultlist=list(result.values())
+            #在list裡取元件,就是list[0]來取
+            #在dict裡取值,就是dict["key值"]來取值
+            #所以resultlist[0]["id"] 就是取list裡的第0個位置的元件,再依key值為id的取value值
+            print(resultlist[0]["id"])
+            return JsonResponse(resultlist,safe=False)
+        else:
+            return HttpResponse("userid no match!!")
+    else:
+        return HttpResponse(" no  permission")
+   
+def api_product_getall(request,userid=None):
+    if request.user.is_authenticated:
+        userid_db=request.user.username
+        #下面的判斷式如果放到java或javascript裡,就需要做轉型,轉成string,但py不用
+        userid_current=userid
+        if userid_db == userid_current:
+            result =product.objects.all()
+            resultlist=list(result.values())
+            #在list裡取元件,就是list[0]來取
+            #在dict裡取值,就是dict["key值"]來取值
+            #所以resultlist[0]["id"] 就是取list裡的第0個位置的元件,再依key值為id的取value值
+           # print(resultlist[0]["id"])
+            return JsonResponse(resultlist,safe=False)
+        else:
+            return HttpResponse("userid no match!!")
+    else:
+        return HttpResponse(" no  permission")
+    
+        
+def worldmap(request):
+    return render(request,"out1_17.svg")

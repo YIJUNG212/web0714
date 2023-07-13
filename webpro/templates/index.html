@@ -30,7 +30,16 @@
     <li class="nav-item">
     <a class="nav-link" href="shopcar_show">購物車</a>
   </li>
+   </li>
+   </li>
+ 
+
+  
   {% if request.user.is_authenticated  %}
+     <li class="nav-item">
+    <a class="nav-link" href="api_product_getall/{{username}}">API端點JSON格式</a>
+  </li>
+
   <li class="nav-item">
     <a class="nav-link" href="logout">登出</a>
   </li>
@@ -39,8 +48,8 @@
 
 {% if request.user.is_authenticated  %}
 <div class="d-flex justify-content-center"><h2>歡迎光臨: &nbsp {{ request.user }}</h2></div>
-
-
+<div class="d-flex justify-content-center" ><h2>基本商品上傳之相關CRUD功能已建立，本練習平台持續精進中</h2></div>
+<div class="d-flex justify-content-center" ><h2>滾石不生笞，一起轉動吧!!!</h2></div>
 
 
 {% endif %}

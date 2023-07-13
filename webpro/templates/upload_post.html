@@ -7,10 +7,13 @@
         justify-content: center;
         height: 50vh;
     }
+    .index{margin-top:50px; margin-right:250px;}
 {% endblock %}
 
 {% block content %}
+
 <div class="center" >
+<div class="index"><a href="/index">返回首頁</a></div>
 <!-- 下面的action沒指定就是再回目前的url-->
 <form action="" method="POST" enctype="multipart/form-data">
 {% csrf_token %}
@@ -20,5 +23,6 @@
 <div>商品照片<input type="file" name="item_photo_image" id="item_item_photo_imagename" ></div>
 <div><input type="submit"  value="儲存商品"></div>
 </form>
+
 </div>
 {% endblock %}
