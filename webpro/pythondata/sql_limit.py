@@ -1,3 +1,4 @@
+
 import mysql.connector
 Mydb =mysql.connector.connect(
     host="localhost",
